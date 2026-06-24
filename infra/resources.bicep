@@ -140,7 +140,7 @@ resource privateDnsZoneDB 'Microsoft.Network/privateDnsZones@2020-06-01' = {
   }
 }
 
-// Resources needed to secure Redis Cache behind a private endpoint
+// Resources needed to secure Azure Managed Redis behind a private endpoint
 resource cachePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = {
   name: '${appName}-cache-privateEndpoint'
   location: location
@@ -153,7 +153,7 @@ resource cachePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = 
         name: '${appName}-cache-privateEndpoint'
         properties: {
           privateLinkServiceId: redisCache.id
-          groupIds: ['redisCache']
+          groupIds: ['redisEnterprise']
         }
       }
     ]
@@ -173,7 +173,7 @@ resource cachePrivateEndpoint 'Microsoft.Network/privateEndpoints@2023-04-01' = 
   }
 }
 resource privateDnsZoneCache 'Microsoft.Network/privateDnsZones@2020-06-01' = {
-  name: 'privatelink.redis.cache.windows.net'
+  name: 'privatelink.redisenterprise.cache.azure.net'
   location: 'global'
   dependsOn: [
     virtualNetwork
@@ -293,20 +293,23 @@ resource dbserver 'Microsoft.DBforMySQL/flexibleServers@2024-06-01-preview' = {
   ]
 }
 
-// The Redis cache is configured to the minimum pricing tier
-resource redisCache 'Microsoft.Cache/Redis@2023-08-01' = {
+// Azure Managed Redis configured to the minimum pricing tier.
+resource redisCache 'Microsoft.Cache/redisEnterprise@2026-02-01-preview' = {
   name: '${appName}-cache'
   location: location
+  sku: {
+    name: 'Balanced_B0'
+  }
   properties: {
-    sku: {
-      name: 'Basic'
-      family: 'C'
-      capacity: 0
-    }
-    redisConfiguration: {}
-    enableNonSslPort: false
-    redisVersion: '6'
+    minimumTlsVersion: '1.2'
     publicNetworkAccess: 'Disabled'
+  }
+
+  resource redisDatabase 'databases@2026-02-01-preview' = {
+    name: 'default'
+    properties: {
+      accessKeysAuthentication: 'Enabled'
+    }
   }
 }
 
@@ -424,7 +427,7 @@ resource cacheConnector 'Microsoft.ServiceLinker/linkers@2024-04-01' = {
     clientType: 'java'
     targetService: {
       type: 'AzureResource'
-      id:  resourceId('Microsoft.Cache/Redis/Databases', redisCache.name, '0')
+      id: redisCache::redisDatabase.id
     }
     authInfo: {
       authType: 'accessKey'
