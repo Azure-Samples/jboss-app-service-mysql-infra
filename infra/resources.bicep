@@ -335,7 +335,7 @@ resource web 'Microsoft.Web/sites@2022-09-01' = {
   }
   properties: {
     siteConfig: {
-      linuxFxVersion: 'JBOSSEAP|8-java17' // Set to Java 17, JBoss EAP 8
+      linuxFxVersion: 'JBOSSEAP|8-java21' // Set to Java 21, JBoss EAP 8
       vnetRouteAllEnabled: true // Route outbound traffic to the VNET
       ftpsState: 'Disabled'
 
@@ -511,6 +511,8 @@ var aggregatedAppSettings = union(
   reduce(cacheConnector.listConfigurations().configurations, {}, (cur, next) => union(cur, { '${next.name}': next.value })), 
   {
     'AZURE_MYSQL_CONNECTIONSTRING': 'jdbc:mysql://${dbserver.name}.mysql.database.azure.com:3306/${dbserver::db.name}?serverTimezone=UTC&sslmode=required&user=${appName}-mi&defaultAuthenticationPlugin=com.azure.identity.extensions.jdbc.mysql.AzureMysqlAuthenticationPlugin&authenticationPlugins=com.azure.identity.extensions.jdbc.mysql.AzureMysqlAuthenticationPlugin'
+    // Tell JBoss EAP to auto-configure a JNDI data source (java:jboss/env/jdbc/AZURE_MYSQL_CONNECTIONSTRING_DS) from the AZURE_MYSQL_CONNECTIONSTRING JDBC URL above.
+    'WEBSITE_AUTOCONFIGURE_DATABASE': 'true'
     // Add other app settings here, for example:
     // 'FOO': 'BAR'
   }
